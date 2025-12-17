@@ -1,0 +1,201 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\kap}{\kappa}
+
+\title{Late-Time Gaussian Convergence and\\$K=2$ Truncation Accuracy}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+
+We verify numerically that for the $\beta$-$\Gamma$ bandit, the probability distribution
+$p(\gamma, t)$ converges to a Gaussian as $t \to \infty$. Consequently, the $K=2$
+(Gaussian) truncation of the Edgeworth expansion becomes increasingly accurate at late times.
+
+\section{Physical Intuition}
+
+The Central Limit Theorem (CLT) applies to the accumulated log-likelihood ratio $\gamma$
+because:
+\begin{enumerate}
+  \item At each time step, $\gamma$ receives an increment $\xi = ya \in \{+1, -1\}$.
+  \item While increments are not independent (they depend on $\gamma$ through the policy),
+        the variance grows as $\sigma^2 \sim t$, spreading the distribution.
+  \item As $\sigma \to \infty$, the effective inverse temperature
+        $\tilde{\beta} = \beta/\sqrt{1 + \beta^2\sigma^2} \to 0$.
+  \item With $\tilde{\beta} \to 0$, the policy becomes diffuse ($b \to 0$),
+        and increments become approximately i.i.d.
+\end{enumerate}
+
+Thus, at late times, the distribution approaches Gaussian, and higher cumulants become
+negligible.
+
+\section{Standardized Cumulants}
+
+The proper measures of non-Gaussianity are the \textbf{standardized cumulants}:
+\begin{align}
+  \text{Skewness} &= \frac{\kap_3}{\sigma^3}, \\
+  \text{Excess kurtosis} &= \frac{\kap_4}{\sigma^4}.
+\end{align}
+
+For a Gaussian distribution, both are exactly zero. As $t \to \infty$, we expect:
+\begin{equation}
+  \frac{\kap_j}{\sigma^j} \sim t^{-(j-2)/2}, \quad j \geq 3.
+\end{equation}
+
+Note that the \emph{raw} cumulants $\kap_3, \kap_4$ grow with time (since $\sigma$ grows),
+but the standardized versions decay.
+
+\section{Truncation Rate Error}
+
+The truncation rate error measures how well the $K$-truncated Edgeworth ansatz predicts
+the instantaneous cumulant update:
+\begin{equation}
+  \epsilon_j^K(t) = |\Delta\kap_j^{\text{exact}}(t) - \Delta\kap_j^{K\text{-ansatz}}(t)|,
+\end{equation}
+where:
+\begin{itemize}
+  \item $\Delta\kap_j^{\text{exact}} = \kap_j(t+1) - \kap_j(t)$ from the exact master equation.
+  \item $\Delta\kap_j^{K\text{-ansatz}}$ is computed from the $K$-truncated Edgeworth formulas,
+        evaluated with the \emph{exact} cumulants $\kap_1(t), \ldots, \kap_K(t)$.
+\end{itemize}
+
+This is not trajectory error (which accumulates), but rather measures how accurately
+the truncated ansatz predicts the next step given the true current state.
+
+\section{Numerical Results}
+
+\subsection{Parameters}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+$m_+, m_-$ (initial counts) & 10, 10 \\
+$\beta$ (inverse temperature) & 0.3 \\
+$\eta_+$ (arm 1 reward rate) & 0.6 \\
+$\eta_-$ (arm 2 reward rate) & 0.4 \\
+$\bar{\eta} = (\eta_+ + \eta_-)/2$ & 0.5 \\
+$\Delta\eta = (\eta_+ - \eta_-)/2$ & 0.1 \\
+Time horizon $T$ & 1000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Late-Time Convergence}
+
+Figure~\ref{fig:convergence} shows four key results:
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{../fig/late_time_gaussian_convergence.png}
+  \caption{Late-time Gaussian convergence. \textbf{Top left:} $K=2$ truncation rate error
+  for mean and variance updates decays to machine precision.
+  \textbf{Top right:} Standardized cumulants (skewness, excess kurtosis) decay toward zero.
+  \textbf{Bottom left:} Error vs truncation order $K$ at various times.
+  \textbf{Bottom right:} Power-law decay of truncation error on log-log scale.}
+  \label{fig:convergence}
+\end{figure}
+
+\begin{enumerate}
+  \item \textbf{Truncation error decay (top left):} The $K=2$ closure errors
+        $\epsilon_1^{K=2}$ and $\epsilon_2^{K=2}$ peak during the transient
+        ($t \sim 50$) at $O(10^{-4})$ and $O(10^{-2})$ respectively, then
+        decay to machine precision ($O(10^{-14})$) by $t \sim 500$.
+
+  \item \textbf{Standardized cumulant decay (top right):} Skewness decays from
+        peak values ($\sim -0.45$ at $t=50$) to $-0.06$ at $t=1000$; excess kurtosis
+        decays from $0.56$ to $0.01$. Both approach zero as $t \to \infty$,
+        confirming Gaussian convergence.
+
+  \item \textbf{Exact vs ansatz rates (bottom left):} The $K=2$ ansatz
+        accurately predicts the variance rate $\Delta\kap_2$ across all times,
+        with agreement improving as the distribution becomes Gaussian.
+
+  \item \textbf{Non-Gaussianity measures (bottom right):} Skewness and excess
+        kurtosis decay monotonically toward zero, directly demonstrating
+        convergence to a Gaussian distribution.
+\end{enumerate}
+
+\subsection{Summary Table}
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+Time $t$ & Skewness & Excess Kurtosis & $\epsilon_2^{K=2}$ \\
+\midrule
+0    & $0.00$   & $0.00$  & $4 \times 10^{-15}$ \\
+50   & $-0.45$  & $0.56$  & $4 \times 10^{-2}$ \\
+100  & $-0.32$  & $0.39$  & $6 \times 10^{-4}$ \\
+200  & $-0.19$  & $0.15$  & $8 \times 10^{-8}$ \\
+500  & $-0.09$  & $0.03$  & $6 \times 10^{-14}$ \\
+1000 & $-0.06$  & $0.01$  & $1 \times 10^{-13}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+By $t \sim 500$, the truncation error reaches machine precision, confirming that
+the distribution is effectively Gaussian and the $K=2$ closure is exact.
+
+\section{Rates Comparison}
+
+Figure~\ref{fig:rates} compares the exact cumulant rates $\Delta\kap_j^{\text{exact}}$
+with the ansatz predictions for various truncation orders.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{../fig/rates_comparison.png}
+  \caption{Comparison of exact cumulant rates vs $K$-truncated ansatz predictions.
+  \textbf{Top left:} Mean rate $\Delta\kap_1$.
+  \textbf{Top right:} Variance rate $\Delta\kap_2$.
+  \textbf{Bottom left:} Exact rates for $\kap_1$ through $\kap_4$.
+  \textbf{Bottom right:} Relative error in variance rate.}
+  \label{fig:rates}
+\end{figure}
+
+\section{Truncation Rate Error Detail}
+
+Figure~\ref{fig:truncation} provides detailed analysis of the truncation rate error
+for varying $K$ and $j$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{../fig/truncation_rate_error.png}
+  \caption{Truncation rate error over $T=1000$ time steps.
+  \textbf{Top left:} $K=2$ error in mean rate peaks during transient then decays.
+  \textbf{Top right:} $K=2$ error in variance rate follows similar pattern.
+  \textbf{Bottom left:} Error for $j=1,2$ with fixed $K=2$.
+  \textbf{Bottom right:} Non-Gaussianity measures (skewness, excess kurtosis) decay toward zero.}
+  \label{fig:truncation}
+\end{figure}
+
+\section{Conclusion}
+
+The numerical results confirm the physical intuition:
+
+\begin{quote}
+\emph{Post-transient, $p(\gamma, t)$ becomes Gaussian as $t \to \infty$,
+therefore the $K=2$ Edgeworth truncation becomes exact in the late-time limit.}
+\end{quote}
+
+Quantitatively at $T=1000$:
+\begin{itemize}
+  \item Skewness: $-0.06 \to 0$ as $t \to \infty$
+  \item Excess kurtosis: $0.01 \to 0$ as $t \to \infty$
+  \item $K=2$ truncation error: $O(10^{-14})$ (machine precision) by $t \sim 500$
+\end{itemize}
+
+For practical purposes, the $K=2$ (Gaussian) closure is sufficient for late-time
+dynamics. Higher-order closures ($K \geq 3$) are only necessary during the transient
+regime ($t \lesssim 100$) when the distribution has significant non-Gaussian features.
+
+\end{document}

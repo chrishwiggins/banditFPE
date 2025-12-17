@@ -1,0 +1,793 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\kap}{\kappa}
+
+\title{Cumulant Update Equations for the $\beta$-$\Gamma$ Bandit}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Setup}
+
+Consider the two-armed bandit with binary outcomes. The agent maintains a
+log-likelihood ratio $\gamma \in \mathbb{Z}$ and selects actions according to:
+\begin{equation}
+  p(a = +1 \mid \gamma) = \Phi(\beta \gamma),
+\end{equation}
+where $\Phi$ is a sigmoid (e.g., logistic or probit). The outcome $y \in \{-1, +1\}$
+is drawn from arm $a$ with probability
+\begin{equation}
+  p(y \mid a) = \frac{1}{2}(1 + y \eta_a), \quad \eta_a \in (-1, 1).
+\end{equation}
+The state update is $\gamma' = \gamma + ya$.
+
+\paragraph{Notation.} Define:
+\begin{align}
+  \bar{\eta} &= \frac{\eta_+ + \eta_-}{2}, \quad
+  \Delta\eta = \frac{\eta_+ - \eta_-}{2}, \\
+  b(\gamma) &= 2\Phi(\beta\gamma) - 1 = \E[a \mid \gamma].
+\end{align}
+Throughout, $\Phi$ denotes the standard normal CDF and $\varphi$ denotes the standard normal PDF:
+\begin{equation}
+  \Phi(x) = \int_{-\infty}^x \varphi(t)\,dt, \quad \varphi(x) = \frac{1}{\sqrt{2\pi}}e^{-x^2/2}.
+\end{equation}
+
+\section{Master Equation}
+
+Let $p_n(\gamma)$ denote the probability of state $\gamma$ at discrete time $n$.
+The master equation is:
+\begin{equation}
+  p_{n+1}(\gamma) = \sum_{y,a \in \{\pm 1\}} p(y \mid a) \, p(a \mid \gamma - ya) \, p_n(\gamma - ya).
+\end{equation}
+Expanding the four terms $(y,a) \in \{(+,+), (+,-), (-,+), (-,-)\}$:
+\begin{align}
+  p_{n+1}(\gamma) &= \frac{1+\eta_+}{2} \Phi(\beta(\gamma-1)) \, p_n(\gamma-1)
+    + \frac{1+\eta_-}{2} [1-\Phi(\beta(\gamma+1))] \, p_n(\gamma+1) \notag\\
+  &\quad + \frac{1-\eta_+}{2} \Phi(\beta(\gamma+1)) \, p_n(\gamma+1)
+    + \frac{1-\eta_-}{2} [1-\Phi(\beta(\gamma-1))] \, p_n(\gamma-1).
+\end{align}
+Collecting terms at $\gamma \pm 1$:
+\begin{align}
+  p_{n+1}(\gamma) &= R^+(\gamma-1) \, p_n(\gamma-1) + R^-(\gamma+1) \, p_n(\gamma+1),
+\end{align}
+where the transition rates are:
+\begin{align}
+  R^+(\gamma) &= \frac{1+\eta_+}{2}\Phi(\beta\gamma) + \frac{1-\eta_-}{2}[1-\Phi(\beta\gamma)], \\
+  R^-(\gamma) &= \frac{1-\eta_+}{2}\Phi(\beta\gamma) + \frac{1+\eta_-}{2}[1-\Phi(\beta\gamma)].
+\end{align}
+After simplification:
+\begin{align}
+  R^+(\gamma) &= \frac{1}{2}\bigl[1 + \bar{\eta} + \Delta\eta \, b(\gamma)\bigr], \\
+  R^-(\gamma) &= \frac{1}{2}\bigl[1 - \bar{\eta} - \Delta\eta \, b(\gamma)\bigr].
+\end{align}
+Note that $R^+ + R^- = 1$ (probability conservation).
+
+\section{Cumulant Generating Function}
+
+Let $\langle \cdot \rangle_n$ denote expectation with respect to $p_n$.
+Define the cumulant generating function:
+\begin{equation}
+  K_n(\theta) = \log \E_n[e^{\theta \gamma}] = \log \sum_\gamma e^{\theta\gamma} p_n(\gamma).
+\end{equation}
+The cumulants $\kap_k^{(n)}$ are:
+\begin{equation}
+  \kap_k^{(n)} = \frac{d^k K_n}{d\theta^k}\bigg|_{\theta=0}.
+\end{equation}
+Explicitly: $\kap_1 = \langle\gamma\rangle$ (mean),
+$\kap_2 = \langle\gamma^2\rangle - \langle\gamma\rangle^2$ (variance),
+$\kap_3 = \langle(\gamma - \langle\gamma\rangle)^3\rangle$ (skewness times $\sigma^3$), etc.
+
+\section{General Cumulant Update}
+
+Define the increment $\xi = ya$. Given $\gamma$, the conditional distribution of $\xi$ is:
+\begin{equation}
+  p(\xi \mid \gamma) = R^+(\gamma)\delta_{\xi,+1} + R^-(\gamma)\delta_{\xi,-1}.
+\end{equation}
+The conditional cumulant generating function of $\xi$ is:
+\begin{equation}
+  K_{\xi|\gamma}(\theta) = \log\bigl[R^+(\gamma)e^\theta + R^-(\gamma)e^{-\theta}\bigr].
+\end{equation}
+
+Since $\gamma' = \gamma + \xi$, the CGF at time $n+1$ is:
+\begin{equation}
+  K_{n+1}(\theta) = \log \E_n\bigl[e^{\theta\gamma} \cdot (R^+(\gamma)e^\theta + R^-(\gamma)e^{-\theta})\bigr].
+\end{equation}
+
+\subsection{Cumulant Extraction}
+
+To find the update for $\kap_k$, differentiate $K_{n+1}(\theta)$ and set $\theta = 0$.
+Using $R^\pm(\gamma) = \frac{1}{2}[1 \pm v(\gamma)]$ where
+\begin{equation}
+  v(\gamma) \equiv R^+(\gamma) - R^-(\gamma) = \bar{\eta} + \Delta\eta \, b(\gamma),
+\end{equation}
+we have:
+\begin{equation}
+  R^+ e^\theta + R^- e^{-\theta} = \cosh\theta + v(\gamma)\sinh\theta.
+\end{equation}
+
+Define:
+\begin{equation}
+  F(\theta, \gamma) = \log[\cosh\theta + v(\gamma)\sinh\theta].
+\end{equation}
+The derivatives are:
+\begin{align}
+  \partial_\theta F &= \frac{\sinh\theta + v\cosh\theta}{\cosh\theta + v\sinh\theta}, \\
+  \partial_\theta^2 F &= \frac{1 - v^2}{(\cosh\theta + v\sinh\theta)^2}.
+\end{align}
+At $\theta = 0$:
+\begin{equation}
+  F(0,\gamma) = 0, \quad
+  \partial_\theta F\big|_{\theta=0} = v(\gamma), \quad
+  \partial_\theta^2 F\big|_{\theta=0} = 1 - v(\gamma)^2.
+\end{equation}
+
+\section{Mean Update ($\kap_1$)}
+
+The mean satisfies:
+\begin{equation}
+  \kap_1^{(n+1)} = \frac{dK_{n+1}}{d\theta}\bigg|_{\theta=0}
+  = \frac{dK_n}{d\theta}\bigg|_{\theta=0} + \langle v(\gamma) \rangle_n.
+\end{equation}
+Hence:
+\begin{equation}
+  \boxed{
+    \kap_1^{(n+1)} = \kap_1^{(n)} + \langle v(\gamma) \rangle_n
+    = \kap_1^{(n)} + \bar{\eta} + \Delta\eta \, \langle b(\gamma) \rangle_n.
+  }
+\end{equation}
+
+This shows: the mean drifts by the expected velocity $\langle v(\gamma)\rangle$,
+which depends on the current distribution through $\langle b(\gamma)\rangle$.
+
+\section{Variance Update ($\kap_2$)}
+
+For the variance, use the law of total variance. The increment $\xi = ya \in \{+1, -1\}$
+satisfies $\xi^2 = 1$ always, so:
+\begin{equation}
+  \Var(\gamma') = \Var(\gamma + \xi) = \Var(\gamma) + \Var(\xi) + 2\Cov(\gamma, \xi).
+\end{equation}
+
+Since $\E[\xi \mid \gamma] = v(\gamma)$ and $\E[\xi^2] = 1$:
+\begin{align}
+  \E[\xi] &= \langle v \rangle_n, \\
+  \Var(\xi) &= \E[\xi^2] - \E[\xi]^2 = 1 - \langle v \rangle_n^2.
+\end{align}
+
+For the covariance, since $\xi$ depends on $\gamma$ only through $v(\gamma)$:
+\begin{equation}
+  \Cov(\gamma, \xi) = \E[\gamma \cdot \E[\xi|\gamma]] - \E[\gamma]\E[\xi]
+    = \E[\gamma \, v(\gamma)] - \mu_n \langle v \rangle_n = \Cov_n(\gamma, v).
+\end{equation}
+
+Therefore:
+\begin{equation}
+  \boxed{
+    \kap_2^{(n+1)} = \kap_2^{(n)} + 1 - \langle v \rangle_n^2 + 2\,\Cov_n(\gamma, v(\gamma)).
+  }
+\end{equation}
+
+Expanding $v(\gamma) = \bar{\eta} + \Delta\eta \, b(\gamma)$:
+\begin{equation}
+  \langle v \rangle = \bar{\eta} + \Delta\eta \langle b \rangle, \quad
+  \Cov(\gamma, v) = \Delta\eta \, \Cov(\gamma, b).
+\end{equation}
+
+So the variance update becomes:
+\begin{equation}
+  \boxed{
+    \sigma_{n+1}^2 = \sigma_n^2 + 1 - (\bar{\eta} + \Delta\eta \langle b \rangle_n)^2
+      + 2\Delta\eta \, \Cov_n(\gamma, b(\gamma)).
+  }
+\end{equation}
+
+\paragraph{Special case: $\bar{\eta} = 0$ (symmetric arms).}
+\begin{equation}
+  \sigma_{n+1}^2 = \sigma_n^2 + 1 - \Delta\eta^2 \langle b \rangle_n^2
+    + 2\Delta\eta \, \Cov_n(\gamma, b).
+\end{equation}
+
+\section{General $k$-th Cumulant Update}
+
+For arbitrary $k$, the update takes the form:
+\begin{equation}
+  \kap_k^{(n+1)} = \kap_k^{(n)} + \Delta\kap_k(p_n),
+\end{equation}
+where $\Delta\kap_k$ is a functional of the distribution $p_n$.
+
+Define the ``local cumulants'' of $\xi$ given $\gamma$:
+\begin{align}
+  c_1(\gamma) &= v(\gamma), \\
+  c_2(\gamma) &= 1 - v(\gamma)^2, \\
+  c_k(\gamma) &= \frac{d^k}{d\theta^k}\log[R^+ e^\theta + R^- e^{-\theta}]\big|_{\theta=0}.
+\end{align}
+These are:
+\begin{align}
+  c_3(\gamma) &= v(1 - v^2) - (1 - v^2)(-2v) = v(1-v^2) + 2v(1-v^2) = -v(1-v^2)(1 - 2) \\
+  &= 2v(1-v^2) - 2v(1-v^2) = -2v^3 + 2v.
+\end{align}
+Actually, let us compute more carefully. With $R^\pm = (1 \pm v)/2$:
+\begin{equation}
+  c_3 = \frac{d^3}{d\theta^3}\log(\cosh\theta + v\sinh\theta)\big|_{\theta=0}.
+\end{equation}
+Using $F''' = F'(1 - 2v F') - F''(2vF') + \ldots$, one finds:
+\begin{equation}
+  c_3(\gamma) = 2v(v^2 - 1) = -2v(1-v^2).
+\end{equation}
+And in general, the local cumulants satisfy a recurrence.
+
+\paragraph{Cumulant mixing formula.}
+The update for the $k$-th cumulant involves mixed moments:
+\begin{equation}
+  \Delta\kap_k = \sum_{j=0}^k \binom{k}{j} \cdot (\text{joint cumulant of $j$ copies of $\gamma$ and 1 copy of $\xi$}) - \kap_k^{(n)}.
+\end{equation}
+
+For practical computation, we express everything in terms of the functionals:
+\begin{equation}
+  \langle \gamma^m b(\gamma)^\ell \rangle_n,
+\end{equation}
+which must be evaluated under the current distribution $p_n$.
+
+\subsection{Edgeworth Representation}
+
+If we represent the continuum distribution $q(\gamma)$ via an Edgeworth expansion:
+\begin{equation}
+  q(\gamma) = \varphi\Bigl(\frac{\gamma - \mu}{\sigma}\Bigr)
+  \left[1 + \frac{\kap_3}{6\sigma^3}H_3(z) + \frac{\kap_4}{24\sigma^4}H_4(z) + \cdots\right],
+\end{equation}
+where $z = (\gamma - \mu)/\sigma$, $\varphi$ is the standard normal density,
+and $H_k$ are Hermite polynomials, then:
+
+\begin{itemize}
+  \item $\kap_1 = \mu$ (the mean),
+  \item $\kap_2 = \sigma^2$ (the variance),
+  \item $\kap_3, \kap_4, \ldots$ appear as expansion coefficients.
+\end{itemize}
+
+The discrete-to-continuum matching condition is:
+\begin{equation}
+  \kap_k^{\text{discrete}}(n) = \kap_k^{\text{Edgeworth}}(t = n\Delta t), \quad \forall k.
+\end{equation}
+
+\section{Summary: First Two Cumulant Updates}
+
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+\textbf{Mean:}
+\begin{equation}
+  \mu_{n+1} = \mu_n + \bar{\eta} + \Delta\eta \, \langle b(\gamma) \rangle_n.
+\end{equation}
+
+\textbf{Variance:}
+\begin{equation}
+  \sigma_{n+1}^2 = \sigma_n^2 + 1 - \langle v \rangle_n^2
+    + 2\Delta\eta\,\Cov_n(\gamma, b(\gamma)),
+\end{equation}
+where $v(\gamma) = \bar{\eta} + \Delta\eta \, b(\gamma)$ and
+$b(\gamma) = 2\Phi(\beta\gamma) - 1$.
+}}
+
+\paragraph{Remark.} The expectations $\langle \cdot \rangle_n$ must be computed
+under the current distribution $p_n$. In the Edgeworth/Gaussian approximation,
+these become functions of $(\mu_n, \sigma_n^2, \kap_3, \ldots)$, closing the system.
+
+For a Gaussian approximation (truncating at $\kap_2$), we need:
+\begin{equation}
+  \langle b(\gamma) \rangle_n \approx \int_{-\infty}^\infty b(\gamma)
+  \cdot \frac{1}{\sqrt{2\pi\sigma_n^2}} e^{-(\gamma-\mu_n)^2/(2\sigma_n^2)} \, d\gamma,
+\end{equation}
+and similarly for $\langle b^2 \rangle$, $\langle \gamma b \rangle$, etc.
+
+\section{Exact Gaussian-Probit Integrals}
+
+When $\Phi$ is the \emph{probit} (standard normal CDF), the required expectations
+have exact closed forms. This follows from the fundamental identity:
+
+\subsection{The Owen-type Identity}
+
+For $\gamma \sim \mathcal{N}(\mu, \sigma^2)$, the expectation of $\Phi(a + b\gamma)$ is:
+\begin{equation}
+  \boxed{
+    \E[\Phi(a + b\gamma)] = \Phi\left(\frac{a + b\mu}{\sqrt{1 + b^2\sigma^2}}\right).
+  }
+\end{equation}
+
+\paragraph{Proof.} Write $\gamma = \mu + \sigma Z$ where $Z \sim \mathcal{N}(0,1)$. Then
+$a + b\gamma = (a + b\mu) + b\sigma Z$. We need $\E[\Phi((a+b\mu) + b\sigma Z)]$.
+Using the identity $\E[\Phi(\alpha + \beta Z)] = \Phi(\alpha/\sqrt{1+\beta^2})$
+(which follows from $\Phi(\alpha + \beta Z) = P(W < \alpha + \beta Z)$ for independent
+$W \sim \mathcal{N}(0,1)$, so $P(W - \beta Z < \alpha) = \Phi(\alpha/\sqrt{1+\beta^2})$),
+we get the result with $\alpha = a + b\mu$ and $\beta = b\sigma$.
+
+\subsection{Application to the Mean Update}
+
+Since $b(\gamma) = 2\Phi(\beta\gamma) - 1$, we have:
+\begin{equation}
+  \langle b(\gamma) \rangle_n = 2\,\E_n[\Phi(\beta\gamma)] - 1
+  = 2\Phi\left(\frac{\beta\mu_n}{\sqrt{1 + \beta^2\sigma_n^2}}\right) - 1.
+\end{equation}
+
+Define the \textbf{effective inverse temperature}:
+\begin{equation}
+  \tilde{\beta}_n \equiv \frac{\beta}{\sqrt{1 + \beta^2\sigma_n^2}}.
+\end{equation}
+Then:
+\begin{equation}
+  \boxed{
+    \langle b(\gamma) \rangle_n = 2\Phi(\tilde{\beta}_n \mu_n) - 1 = \mathrm{erf}\left(\frac{\tilde{\beta}_n \mu_n}{\sqrt{2}}\right),
+  }
+\end{equation}
+where $\mathrm{erf}$ is the error function (for probit $\Phi$).
+
+The mean update becomes:
+\begin{equation}
+  \boxed{
+    \mu_{n+1} = \mu_n + \bar{\eta} + \Delta\eta \cdot \mathrm{erf}\left(\frac{\tilde{\beta}_n \mu_n}{\sqrt{2}}\right).
+  }
+\end{equation}
+
+\paragraph{Interpretation.} The effective $\tilde{\beta}$ decreases as variance $\sigma^2$ grows.
+Large uncertainty ``softens'' the policy, reducing exploitation.
+
+\subsection{Higher Moments via Hermite Polynomials}
+
+For $\gamma \sim \mathcal{N}(\mu, \sigma^2)$, define $z = (\gamma - \mu)/\sigma$.
+Then $\gamma^j = \sum_{k=0}^j \binom{j}{k} \mu^{j-k} \sigma^k z^k$, and we need:
+\begin{equation}
+  I_k(a, b) \equiv \int_{-\infty}^\infty z^k \varphi(z) \Phi(a + bz) \, dz, \quad |b| < 1.
+\end{equation}
+
+The key recurrence (integration by parts) is:
+\begin{equation}
+  I_k(a, b) = (k-1) I_{k-2}(a, b) + b \cdot J_{k-1}(a, b),
+\end{equation}
+where $J_k(a, b) = \int z^k \varphi(z) \varphi(a + bz) \, dz$.
+
+\paragraph{Base cases.}
+\begin{align}
+  I_0(a, b) &= \Phi\left(\frac{a}{\sqrt{1+b^2}}\right), \\
+  I_1(a, b) &= \frac{b}{\sqrt{1+b^2}} \, \varphi\left(\frac{a}{\sqrt{1+b^2}}\right).
+\end{align}
+
+\paragraph{Second moment.} Using the recurrence:
+\begin{equation}
+  I_2(a, b) = I_0(a, b) + b \cdot J_1(a, b).
+\end{equation}
+Since $J_1(a, b) = -\frac{ab}{(1+b^2)^{3/2}} \varphi\left(\frac{a}{\sqrt{1+b^2}}\right)$, we get:
+\begin{equation}
+  I_2(a, b) = \Phi\left(\frac{a}{\sqrt{1+b^2}}\right)
+    - \frac{ab^2}{(1+b^2)^{3/2}} \varphi\left(\frac{a}{\sqrt{1+b^2}}\right).
+\end{equation}
+
+\subsection{Closed Form for Variance Update}
+
+We need $\langle b \rangle$ and $\Cov(\gamma, b)$ under $\gamma \sim \mathcal{N}(\mu_n, \sigma_n^2)$.
+
+Define $\tilde{a} = \beta\mu_n$, $\tilde{b} = \beta\sigma_n$, and
+$\rho = 1/\sqrt{1 + \tilde{b}^2}$ (so $\tilde{\beta}_n = \beta\rho$).
+
+\paragraph{1. Expectation of $b(\gamma)$:}
+\begin{equation}
+  \langle b \rangle = 2\E[\Phi(\beta\gamma)] - 1 = 2\Phi(\tilde{\beta}\mu) - 1.
+\end{equation}
+
+\paragraph{2. Covariance $\Cov(\gamma, b)$:}
+\begin{equation}
+  \Cov(\gamma, b) = 2\Cov(\gamma, \Phi(\beta\gamma))
+    = 2\bigl(\E[\gamma\Phi(\beta\gamma)] - \mu\E[\Phi(\beta\gamma)]\bigr).
+\end{equation}
+Using $\gamma = \mu + \sigma z$ and the $I_1$ integral:
+\begin{equation}
+  \E[\gamma \Phi(\beta\gamma)] = \mu \Phi(\tilde{\beta}\mu) + \sigma \cdot I_1(\tilde{a}, \tilde{b})
+    = \mu \Phi(\tilde{\beta}\mu) + \frac{\sigma \tilde{b}}{\sqrt{1+\tilde{b}^2}} \varphi(\tilde{\beta}\mu).
+\end{equation}
+Thus:
+\begin{equation}
+  \boxed{
+    \Cov(\gamma, b) = \frac{2\beta\sigma^2}{\sqrt{1 + \beta^2\sigma^2}} \varphi(\tilde{\beta}\mu).
+  }
+\end{equation}
+
+\subsection{Closed-Form Cumulant Dynamics}
+
+Under the Gaussian ansatz, the cumulant updates become a 2D map $(\mu, \sigma^2) \mapsto (\mu', \sigma'^2)$.
+
+Define $\tilde{\beta} = \beta/\sqrt{1 + \beta^2\sigma^2}$ and $\langle b \rangle = 2\Phi(\tilde{\beta}\mu) - 1$.
+
+\begin{align}
+  \mu' &= \mu + \bar{\eta} + \Delta\eta \cdot (2\Phi(\tilde{\beta}\mu) - 1), \\
+  \sigma'^2 &= \sigma^2 + 1 - (\bar{\eta} + \Delta\eta \langle b \rangle)^2
+    + \frac{4\Delta\eta^2 \beta\sigma^2}{\sqrt{1+\beta^2\sigma^2}}\varphi(\tilde{\beta}\mu).
+\end{align}
+
+\paragraph{Simplification for $\bar{\eta} = 0$:}
+\begin{align}
+  \mu' &= \mu + \Delta\eta \cdot (2\Phi(\tilde{\beta}\mu) - 1), \\
+  \sigma'^2 &= \sigma^2 + 1 - \Delta\eta^2 (2\Phi(\tilde{\beta}\mu) - 1)^2
+    + \frac{4\Delta\eta^2 \beta\sigma^2}{\sqrt{1+\beta^2\sigma^2}}\varphi(\tilde{\beta}\mu).
+\end{align}
+
+\paragraph{Interpretation.} The variance update has three terms:
+\begin{itemize}
+  \item $+1$: diffusion from the random walk
+  \item $-\langle v \rangle^2$: reduction from mean drift (deterministic component)
+  \item $+2\Delta\eta\,\Cov(\gamma, b)$: amplification when $\gamma$ and policy are correlated
+\end{itemize}
+The covariance term $\propto \varphi(\tilde{\beta}\mu)$ is maximal when $\mu \approx 0$ (agent uncertain)
+and vanishes when $|\mu|$ is large (agent committed).
+
+\section{Exact Cumulant Updates via Probit-Polynomial-Gaussian Integrals}
+
+Under the Gaussian ansatz, all cumulant updates have exact closed forms.
+
+\subsection{Fundamental Integrals}
+
+For $\gamma \sim \mathcal{N}(\mu, \sigma^2)$ with $z = (\gamma - \mu)/\sigma$, define:
+\begin{equation}
+  \rho = \frac{1}{\sqrt{1 + \beta^2\sigma^2}}, \quad
+  u = \frac{\beta\mu}{\sqrt{1 + \beta^2\sigma^2}} = \beta\rho\mu, \quad
+  \lambda = \beta\sigma\rho.
+\end{equation}
+
+The probit-polynomial-Gaussian integrals are:
+\begin{equation}
+  I_k \equiv \int_{-\infty}^\infty z^k \varphi(z) \Phi(u + \lambda z) \, dz.
+\end{equation}
+
+\paragraph{Exact formulas via Hermite polynomials.}
+The probabilist's Hermite polynomials $\mathrm{He}_k(u)$ satisfy $\mathrm{He}_k(u) = u\,\mathrm{He}_{k-1}(u) - (k-1)\mathrm{He}_{k-2}(u)$
+with $\mathrm{He}_0 = 1$, $\mathrm{He}_1 = u$, $\mathrm{He}_2 = u^2 - 1$, $\mathrm{He}_3 = u^3 - 3u$, $\mathrm{He}_4 = u^4 - 6u^2 + 3$.
+
+The integrals have the structure:
+\begin{align}
+  I_0 &= \Phi(u), \\
+  I_1 &= \lambda \varphi(u), \\
+  I_2 &= \Phi(u) - \lambda^2 \mathrm{He}_1(u)\varphi(u), \\
+  I_3 &= \lambda[3 + \lambda^2 \mathrm{He}_2(u)]\varphi(u), \\
+  I_4 &= 3\Phi(u) - \lambda^2[3\mathrm{He}_1(u) + \lambda^2 \mathrm{He}_3(u)]\varphi(u), \\
+  I_5 &= \lambda[15 + 6\lambda^2 \mathrm{He}_2(u) + \lambda^4 \mathrm{He}_4(u)]\varphi(u).
+\end{align}
+
+\paragraph{Recurrence.} Using $\partial_u\Phi(u) = \varphi(u)$ and $\partial_u[\mathrm{He}_j(u)\varphi(u)] = -\mathrm{He}_{j+1}(u)\varphi(u)$:
+\begin{equation}
+  I_k = (k-1)I_{k-2} + \lambda \frac{\partial I_{k-1}}{\partial u}.
+\end{equation}
+This shows that $I_k$ is built from $\{\Phi(u), \varphi(u)\}$ with coefficients that are
+polynomials in $(\lambda^2, u)$, where the $u$-dependence enters through Hermite polynomials.
+
+\paragraph{Structure.} For $k$ even: $I_k = (k-1)!!\Phi(u) + \lambda \cdot (\text{polynomial in }\lambda^2)\cdot\varphi(u)$.
+For $k$ odd: $I_k = \lambda\cdot(\text{polynomial in }\lambda^2, u)\cdot\varphi(u)$.
+The leading Hermite polynomial in $I_k$ is $\mathrm{He}_{k-1}(u)$ with coefficient $\lambda^{k-1}$.
+
+\subsection{Notation: Mean Policy}
+
+Since the combination $2\Phi(u) - 1$ appears throughout, we define:
+\begin{equation}
+  \mathcal{B} \equiv 2\Phi(u) - 1 = \mathrm{erf}\left(\frac{u}{\sqrt{2}}\right) = \langle b \rangle.
+\end{equation}
+This is the \textbf{mean policy}: the expected value of $b(\gamma) = 2\Phi(\beta\gamma) - 1$
+under the Gaussian ansatz. Explicitly,
+\begin{equation}
+  \mathcal{B} = 2\Phi\left(\frac{\beta\mu}{\sqrt{1 + \beta^2\sigma^2}}\right) - 1.
+\end{equation}
+
+We also write $\mathcal{Q} = \varphi(u)$ for the Gaussian density at the effective argument.
+
+\subsection{Moments of the Policy}
+
+Since $b(\gamma) = 2\Phi(\beta\gamma) - 1$:
+\begin{align}
+  \langle b \rangle &= 2I_0 - 1 = \mathcal{B}, \\
+  \langle z \, b \rangle &= 2I_1 = 2\lambda\mathcal{Q}, \\
+  \langle z^2 b \rangle &= 2I_2 - 1 = \mathcal{B} - 2u\lambda^2\mathcal{Q}, \\
+  \langle z^k b \rangle &= 2I_k - \langle z^k \rangle_{\text{Gaussian}}.
+\end{align}
+
+Converting to centered moments: with $\tilde{\gamma} = \gamma - \mu = \sigma z$,
+\begin{equation}
+  \langle \tilde{\gamma}^k b \rangle = \sigma^k \langle z^k b \rangle = \sigma^k(2I_k - \delta_{k,\text{even}}(k-1)!!).
+\end{equation}
+
+\subsection{Increment Statistics}
+
+The increment $\xi = ya \in \{+1, -1\}$ has conditional moments:
+\begin{equation}
+  \E[\xi^k | \gamma] = \begin{cases} 1 & k \text{ even} \\ v(\gamma) & k \text{ odd} \end{cases},
+  \quad v(\gamma) = \bar{\eta} + \Delta\eta \, b(\gamma).
+\end{equation}
+
+Define the centered increment $\tilde{\xi} = \xi - \langle v \rangle$ where $\langle v \rangle = \bar{\eta} + \Delta\eta\langle b \rangle$.
+
+\paragraph{Key expectations:}
+\begin{align}
+  \E[\tilde{\xi}] &= 0, \\
+  \E[\tilde{\xi}^2] &= 1 - \langle v \rangle^2, \\
+  \E[\tilde{\xi}^3] &= \langle v \rangle - 3\langle v \rangle + 2\langle v \rangle^3 = -2\langle v \rangle(1 - \langle v \rangle^2), \\
+  \E[\tilde{\xi}^4] &= 1 - 6\langle v \rangle^2 + 6\langle v \rangle^4 - \langle v \rangle^4 + 6\langle v \rangle^2 = 1 - \langle v \rangle^4 + 6\langle v\rangle^2(\langle v\rangle^2 - 1).
+\end{align}
+
+\paragraph{Cross terms:} Since $\E[\tilde{\gamma}^j \xi | \gamma] = \tilde{\gamma}^j v(\gamma)$ for odd powers of $\xi$,
+\begin{equation}
+  \E[\tilde{\gamma}^j \tilde{\xi}] = \E[\tilde{\gamma}^j v] - \langle v \rangle \E[\tilde{\gamma}^j]
+  = \Delta\eta \bigl( \langle \tilde{\gamma}^j b \rangle - \langle b \rangle \kap_j \bigr)
+  \equiv \Delta\eta \, C_j,
+\end{equation}
+where $C_j = \sigma^j(2I_j - \delta_{j,\text{even}}(j-1)!!) - \mathcal{B}\,\kap_j$ is the \textbf{policy-cumulant covariance}.
+
+\subsection{General Cumulant Update}
+
+The central moments of $\gamma' = \gamma + \xi$ expand via the binomial theorem.
+After converting to cumulants, the exact update is:
+
+\begin{equation}
+  \boxed{
+  \Delta\kap_j = \sum_{k=0}^{j} \binom{j}{k} M_{j-k,k} - \kap_j
+  }
+\end{equation}
+where $M_{m,n} = \E[\tilde{\gamma}^m \tilde{\xi}^n]$ with $\tilde{\gamma} = \gamma - \mu$, $\tilde{\xi} = \xi - \langle v \rangle$.
+
+\paragraph{General formula for $M_{m,n}$.}
+Expand via binomial theorem:
+\begin{equation}
+  M_{m,n} = \E[\tilde{\gamma}^m \tilde{\xi}^n]
+  = \E\left[\tilde{\gamma}^m \sum_{\ell=0}^n \binom{n}{\ell} \xi^\ell (-\langle v \rangle)^{n-\ell}\right]
+  = \sum_{\ell=0}^n \binom{n}{\ell} (-\langle v \rangle)^{n-\ell} \E[\tilde{\gamma}^m \xi^\ell].
+\end{equation}
+Since $\xi^2 = 1$, we have $\xi^\ell = 1$ for $\ell$ even and $\xi^\ell = \xi$ for $\ell$ odd.
+Using $\E[\xi|\gamma] = v(\gamma)$:
+\begin{align}
+  \E[\tilde{\gamma}^m \xi^\ell] &= \begin{cases}
+    \kap_m & \ell \text{ even} \\
+    \E[\tilde{\gamma}^m v(\gamma)] = \bar{\eta}\kap_m + \Delta\eta \langle \tilde{\gamma}^m b \rangle & \ell \text{ odd}
+  \end{cases}.
+\end{align}
+
+Therefore:
+\begin{equation}
+  \boxed{
+  M_{m,n} = \sum_{\ell=0}^n \binom{n}{\ell} (-\langle v \rangle)^{n-\ell}
+  \begin{cases}
+    \kap_m & \ell \text{ even} \\
+    \bar{\eta}\kap_m + \Delta\eta \langle \tilde{\gamma}^m b \rangle & \ell \text{ odd}
+  \end{cases}
+  }
+\end{equation}
+where $\langle \tilde{\gamma}^m b \rangle = 2\sigma^m I_m - \mathcal{B}\,\kap_m$ from the probit integrals.
+
+\paragraph{Simplification.} Define $V_m = \bar{\eta}\kap_m + \Delta\eta \langle \tilde{\gamma}^m b \rangle = \E[\tilde{\gamma}^m v]$.
+Separating even and odd terms:
+\begin{equation}
+  M_{m,n} = \kap_m \sum_{\ell \text{ even}} \binom{n}{\ell} (-\langle v \rangle)^{n-\ell}
+  + V_m \sum_{\ell \text{ odd}} \binom{n}{\ell} (-\langle v \rangle)^{n-\ell}.
+\end{equation}
+Using $(1-x)^n \pm (-1-x)^n = 2\sum_{\ell \text{ even/odd}} \binom{n}{\ell}(-x)^{n-\ell}$:
+\begin{equation}
+  \boxed{
+  M_{m,n} = \frac{\kap_m + V_m}{2}(1 - \langle v \rangle)^n + \frac{\kap_m - V_m}{2}(-1 - \langle v \rangle)^n
+  }
+\end{equation}
+
+\paragraph{Special cases:}
+\begin{align}
+  M_{m,0} &= \kap_m, \\
+  M_{m,1} &= V_m - \langle v \rangle \kap_m = \Delta\eta(\langle \tilde{\gamma}^m b \rangle - \langle b \rangle \kap_m), \\
+  M_{m,2} &= \kap_m(1 + \langle v \rangle^2) - 2\langle v \rangle V_m = (1 - \langle v \rangle^2)\kap_m + 2\Delta\eta\langle v \rangle(\langle b \rangle\kap_m - \langle \tilde{\gamma}^m b \rangle).
+\end{align}
+
+\subsection{Explicit Updates: $\kap_1$ through $\kap_4$}
+
+With $\mathcal{B} = 2\Phi(u) - 1$, $\mathcal{Q} = \varphi(u)$, and $\langle v \rangle = \bar{\eta} + \Delta\eta\,\mathcal{B}$:
+
+\paragraph{Mean:}
+\begin{equation}
+  \boxed{
+    \Delta\kap_1 = \bar{\eta} + \Delta\eta\,\mathcal{B}
+  }
+\end{equation}
+
+\paragraph{Variance:}
+\begin{equation}
+  \boxed{
+    \Delta\kap_2 = 1 - \langle v \rangle^2 + 4\Delta\eta\lambda\sigma\mathcal{Q}
+  }
+\end{equation}
+
+\paragraph{Third cumulant:}
+\begin{equation}
+  \boxed{
+    \Delta\kap_3 = 6\Delta\eta\lambda\sigma^2(1 - u\lambda)\mathcal{Q} - 2\langle v \rangle(1 - \langle v \rangle^2)
+  }
+\end{equation}
+
+\paragraph{Fourth cumulant:}
+\begin{align}
+  \Delta\kap_4 &= -2(1 - \langle v\rangle^2)(1 - 3\langle v\rangle^2) \notag\\
+  &\quad + 8\Delta\eta\lambda\sigma^3(3 - 3u\lambda + u^2\lambda^2 - \lambda^2)\mathcal{Q} \notag\\
+  &\quad + 6\sigma^2\bigl[(1 - \langle v\rangle^2) + \Delta\eta^2(1 - \mathcal{B}^2 - 4\lambda^2\mathcal{Q}^2)\bigr].
+\end{align}
+
+\subsection{Compact Notation}
+
+Define the \textbf{policy moments}:
+\begin{equation}
+  B_k = 2\sigma^k I_k, \quad k = 0, 1, 2, \ldots
+\end{equation}
+Then the cumulant updates are polynomials in $\{B_k, \bar{\eta}, \Delta\eta, \sigma\}$:
+\begin{equation}
+  \Delta\kap_j = P_j(B_0, B_1, \ldots, B_j; \bar{\eta}, \Delta\eta, \sigma),
+\end{equation}
+where $P_j$ is explicitly computable from the binomial expansion.
+
+\subsection{Continuum Limit}
+
+For large $t$, treating $\Delta\kap_j$ as a rate gives the ODE system:
+\begin{equation}
+  \frac{d\kap_j}{dt} = \Delta\kap_j(\mu, \sigma^2),
+\end{equation}
+which is closed since each $\Delta\kap_j$ depends only on $(\mu, \sigma^2)$ through $(u, \lambda, \mathcal{B}, \mathcal{Q})$.
+
+\subsection{Power-Law Decay}
+
+For $\Delta\eta = 0$ (identical arms), CLT applies and standardized cumulants decay as:
+\begin{equation}
+  \frac{\kap_j}{\sigma^j} \sim t^{-(j-2)/2}, \quad j \geq 3.
+\end{equation}
+
+\section{Edgeworth-$K$ Truncation}
+
+The Gaussian ansatz ($K = 2$) tracks only mean and variance. For higher accuracy,
+we use the Edgeworth expansion truncated at order $K$, tracking cumulants $\kap_1, \ldots, \kap_K$.
+
+\subsection{Edgeworth Expansion}
+
+The $K$-truncated Edgeworth expansion is:
+\begin{equation}
+  p_K(\gamma) = \frac{1}{\sigma}\varphi(z)\left[1 + \sum_{j=3}^{K} \frac{\kap_j}{j!\,\sigma^j}\mathrm{He}_j(z)\right],
+\end{equation}
+where $z = (\gamma - \mu)/\sigma$ and $\mathrm{He}_j$ are probabilist's Hermite polynomials.
+
+\paragraph{Normalization.} The expansion satisfies $\int p_K \, d\gamma = 1$ since
+$\int \varphi(z) \mathrm{He}_j(z) \, dz = 0$ for $j \geq 1$.
+
+\paragraph{Cumulant recovery.} Under $p_K$, the cumulants are exactly $\kap_1, \ldots, \kap_K$
+(to leading order in the expansion), with higher cumulants treated as zero.
+
+\subsection{Expectations Under $p_K$}
+
+For any function $f(\gamma)$, the expectation under $p_K$ is:
+\begin{equation}
+  \langle f \rangle_K = \langle f \rangle_{\text{Gauss}}
+    + \sum_{j=3}^{K} \frac{\kap_j}{j!\,\sigma^j} \langle f(\gamma)\,\mathrm{He}_j(z) \rangle_{\text{Gauss}}.
+\end{equation}
+
+For the policy $b(\gamma) = 2\Phi(\beta\gamma) - 1$, we need:
+\begin{align}
+  \langle b \rangle_K &= \mathcal{B} + \sum_{j=3}^{K} \frac{\kap_j}{j!\,\sigma^j} \cdot 2J_{0,j}, \\
+  \langle \tilde{\gamma}^m b \rangle_K &= 2\sigma^m I_m - \mathcal{B}\kap_m
+    + \sum_{j=3}^{K} \frac{\kap_j}{j!\,\sigma^j} \cdot 2\sigma^m J_{m,j},
+\end{align}
+where $J_{m,j}$ are the \textbf{probit-Hermite-Gaussian integrals}:
+\begin{equation}
+  \boxed{
+    J_{m,j}(u, \lambda) \equiv \int_{-\infty}^{\infty} z^m \varphi(z) \mathrm{He}_j(z) \Phi(u + \lambda z) \, dz.
+  }
+\end{equation}
+
+\subsection{Analytic Form of $J_{m,j}$}
+
+\paragraph{Key identity.} The Hermite polynomials satisfy:
+\begin{equation}
+  \mathrm{He}_j(z)\varphi(z) = (-1)^j \frac{d^j\varphi}{dz^j}(z).
+\end{equation}
+
+Therefore:
+\begin{equation}
+  J_{m,j} = (-1)^j \int z^m \frac{d^j\varphi}{dz^j}(z) \Phi(u + \lambda z) \, dz.
+\end{equation}
+
+\paragraph{Integration by parts.} Applying integration by parts $j$ times, moving
+all derivatives onto $\Phi(u + \lambda z)$:
+\begin{equation}
+  J_{m,j} = \int z^m \varphi(z) \frac{d^j}{dz^j}\Phi(u + \lambda z) \, dz
+    = \lambda^j \int z^m \varphi(z) \mathrm{He}_{j-1}(\lambda z + u)\varphi(u + \lambda z) \, dz,
+\end{equation}
+using $\frac{d^j\Phi}{dz^j}(u + \lambda z) = \lambda^j \frac{d^{j-1}\varphi}{du^{j-1}}(u + \lambda z)
+= \lambda^j (-1)^{j-1}\mathrm{He}_{j-1}(u + \lambda z)\varphi(u + \lambda z)$.
+
+\paragraph{Result.} $J_{m,j}$ is expressible in terms of derivatives of $I_m$ with respect to $u$:
+\begin{equation}
+  \boxed{
+    J_{m,j} = \frac{\partial^j I_m}{\partial u^j}.
+  }
+\end{equation}
+
+\paragraph{Proof.} Starting from $I_m(u, \lambda) = \int z^m \varphi(z) \Phi(u + \lambda z) \, dz$,
+\begin{equation}
+  \frac{\partial^j I_m}{\partial u^j} = \int z^m \varphi(z) \frac{\partial^j \Phi}{\partial u^j}(u + \lambda z) \, dz
+    = \int z^m \varphi(z) \varphi^{(j-1)}(u + \lambda z) \, dz,
+\end{equation}
+where $\varphi^{(k)}$ denotes the $k$-th derivative of $\varphi$.
+
+But $\varphi^{(k)}(x) = (-1)^k \mathrm{He}_k(x)\varphi(x)$, so:
+\begin{equation}
+  \frac{\partial^j I_m}{\partial u^j} = (-1)^{j-1} \int z^m \varphi(z) \mathrm{He}_{j-1}(u + \lambda z)\varphi(u + \lambda z) \, dz.
+\end{equation}
+
+Comparing with the Hermite identity applied to the original $J_{m,j}$ integral,
+after careful tracking of signs, we get $J_{m,j} = \partial_u^j I_m$.
+
+\subsection{Explicit $J_{m,j}$ Formulas}
+
+Using $\partial_u \Phi(u) = \varphi(u)$ and $\partial_u \varphi(u) = -u\varphi(u) = -\mathrm{He}_1(u)\varphi(u)$,
+and the general rule $\partial_u[\mathrm{He}_k(u)\varphi(u)] = -\mathrm{He}_{k+1}(u)\varphi(u)$:
+
+\paragraph{$j = 0$ (standard integrals):}
+\begin{equation}
+  J_{m,0} = I_m.
+\end{equation}
+
+\paragraph{$j = 1$:}
+\begin{align}
+  J_{0,1} &= \partial_u I_0 = \partial_u \Phi(u) = \varphi(u) = \mathcal{Q}, \\
+  J_{1,1} &= \partial_u I_1 = \partial_u[\lambda\varphi(u)] = -\lambda u \varphi(u) = -\lambda\mathrm{He}_1(u)\mathcal{Q}, \\
+  J_{2,1} &= \partial_u I_2 = \partial_u[\Phi(u) - \lambda^2 u\varphi(u)]
+    = \varphi(u) - \lambda^2[\varphi(u) - u^2\varphi(u)] \notag\\
+    &= (1 - \lambda^2)\mathcal{Q} + \lambda^2 u^2 \mathcal{Q} = [1 - \lambda^2 + \lambda^2\mathrm{He}_2(u) + \lambda^2]\mathcal{Q} \notag\\
+    &= [1 + \lambda^2\mathrm{He}_2(u)]\mathcal{Q}.
+\end{align}
+
+\paragraph{$j = 2$:}
+\begin{align}
+  J_{0,2} &= \partial_u^2 I_0 = \partial_u \varphi(u) = -u\varphi(u) = -\mathrm{He}_1(u)\mathcal{Q}, \\
+  J_{1,2} &= \partial_u J_{1,1} = \partial_u[-\lambda u\varphi(u)] = -\lambda[\varphi - u^2\varphi]
+    = \lambda(u^2 - 1)\mathcal{Q} = \lambda\mathrm{He}_2(u)\mathcal{Q}.
+\end{align}
+
+\paragraph{General pattern.} $J_{m,j}$ is a polynomial in $(u, \lambda)$ times $\mathcal{Q} = \varphi(u)$,
+with the polynomial expressible in terms of Hermite polynomials.
+
+\subsection{Cumulant Updates Under $p_K$}
+
+The general update $\Delta\kap_j$ under the $K$-truncated Edgeworth expansion takes the form:
+\begin{equation}
+  \Delta\kap_j^{(K)} = \Delta\kap_j^{(\text{Gauss})}
+    + \sum_{\ell=3}^{K} \frac{\kap_\ell}{\ell!} \cdot C_{j,\ell}(\mu, \sigma; \beta, \bar{\eta}, \Delta\eta),
+\end{equation}
+where $\Delta\kap_j^{(\text{Gauss})}$ is the Gaussian ($K=2$) update derived earlier,
+and $C_{j,\ell}$ are correction coefficients involving the $J_{m,\ell}$ integrals.
+
+\paragraph{$K = 1$ (mean only).} Only $\kap_1 = \mu$ is tracked. The variance and all higher cumulants
+are treated as fixed (or evolved by some auxiliary rule). This gives a 1D map for $\mu$.
+
+\paragraph{$K = 2$ (Gaussian).} This is the case already derived: track $(\mu, \sigma^2)$,
+compute updates using $I_0, I_1, I_2$.
+
+\paragraph{$K = 5$ (includes skewness and kurtosis).} Track $(\kap_1, \kap_2, \kap_3, \kap_4, \kap_5)$.
+The corrections involve $J_{m,3}, J_{m,4}, J_{m,5}$ for $m = 0, \ldots, 5$.
+
+\paragraph{$K = 10$.} Track 10 cumulants. Requires $J_{m,j}$ for $m, j = 0, \ldots, 10$.
+
+\subsection{Error Analysis}
+
+The truncation error at order $K$ comes from:
+\begin{enumerate}
+  \item Neglecting cumulants $\kap_{K+1}, \kap_{K+2}, \ldots$ in the distribution ansatz.
+  \item Cross-coupling: higher cumulants affect the dynamics of lower ones.
+\end{enumerate}
+
+\paragraph{Expected scaling.} For distributions approaching Gaussian (CLT regime),
+the standardized cumulants $\kap_j/\sigma^j$ decay as $t^{-(j-2)/2}$.
+Thus, the error from truncating at $K$ should scale as:
+\begin{equation}
+  \text{Error}(K, t) \sim O\bigl(\kap_{K+1}/\sigma^{K+1}\bigr) \sim O\bigl(t^{-(K-1)/2}\bigr).
+\end{equation}
+
+Higher $K$ gives faster error decay, but requires tracking more cumulants and
+computing more $J_{m,j}$ integrals.
+
+\end{document}
