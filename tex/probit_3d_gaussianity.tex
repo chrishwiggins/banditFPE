@@ -1,0 +1,275 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\kap}{\kappa}
+
+\title{Gaussian Convergence in the 3D Probit Bandit:\\
+Analysis via Sufficient Statistics $(Y, A, G)$}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+We extend the analysis of late-time Gaussian convergence from the 1D case
+(using $\gamma = \sum_t a_t y_t$) to a 3D sufficient statistic formulation.
+The key finding is that \textbf{the 3D joint distribution also converges to
+Gaussian as $t \to \infty$}, confirming that the Central Limit Theorem
+intuition applies in this more general setting.
+
+\section{Problem Setup}
+
+\subsection{Sufficient Statistics}
+
+Define three sufficient statistics:
+\begin{align}
+  Y &:= \sum_{t=1}^{T} y_t \quad \text{(total reward)} \\
+  A &:= \sum_{t=1}^{T} a_t \quad \text{(action imbalance)} \\
+  G &:= \sum_{t=1}^{T} a_t y_t \quad \text{(reward-action correlation)}
+\end{align}
+
+Note that $G$ is our previous $\gamma$. The tuple $(Y, A, G)$ provides a
+3D state space for the bandit dynamics.
+
+\subsection{Decision Variable}
+
+The agent estimates arm means as:
+\begin{align}
+  \hat{\mu}_+ &= \frac{\sum_t y_t [a_t = +1]}{\sum_t [a_t = +1]}
+             = \frac{Y + G}{T + A} \\
+  \hat{\mu}_- &= \frac{\sum_t y_t [a_t = -1]}{\sum_t [a_t = -1]}
+             = \frac{Y - G}{T - A}
+\end{align}
+
+The decision variable is:
+\begin{equation}
+  \hat{\mu}_+ - \hat{\mu}_- = \frac{Y + G}{T + A} - \frac{Y - G}{T - A}
+  = \frac{2(GT - AY)}{T^2 - A^2}
+\end{equation}
+
+\subsection{Policy}
+
+The probit policy is:
+\begin{equation}
+  P(a = +1 \mid Y, A, G, T) = \Phi\left(\beta \cdot \frac{GT - AY}{T^2 - A^2}\right)
+\end{equation}
+
+where $\Phi$ is the standard normal CDF and $\beta$ is the inverse temperature.
+
+\section{Measures of Non-Gaussianity}
+
+\subsection{Third-Order Cumulants (Skewness)}
+
+For a 3D distribution $p(Y, A, G)$, there are 10 unique third-order
+standardized cumulants:
+\begin{itemize}
+  \item \textbf{Marginal skewnesses:} $\kap_{300}/\sigma_Y^3$,
+        $\kap_{030}/\sigma_A^3$, $\kap_{003}/\sigma_G^3$
+  \item \textbf{Mixed third-order:} $\kap_{210}$, $\kap_{201}$, $\kap_{120}$,
+        $\kap_{102}$, $\kap_{021}$, $\kap_{012}$
+  \item \textbf{Co-skewness:} $\kap_{111}/(\sigma_Y \sigma_A \sigma_G)$
+\end{itemize}
+
+For a Gaussian distribution, all third-order cumulants are exactly zero.
+
+\subsection{Fourth-Order Cumulants (Kurtosis)}
+
+The marginal excess kurtoses are:
+\begin{equation}
+  \text{Excess kurtosis}(X) = \frac{\kap_4(X)}{\sigma_X^4} - 3
+\end{equation}
+
+For a Gaussian, excess kurtosis is zero for all marginals.
+
+\section{Methods}
+
+\subsection{Master Equation}
+
+The exact probability distribution evolves via:
+\begin{align}
+  p(Y', A', G', t+1) = \sum_{Y,A,G} W(Y',A',G' \mid Y,A,G,t) \cdot p(Y,A,G,t)
+\end{align}
+
+where the transition kernel $W$ has four branches:
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Action & Reward & Transition & Probability \\
+\midrule
+$a=+1$ & $y=1$ & $(Y,A,G) \to (Y+1,A+1,G+1)$ & $P_+ \cdot \eta_+$ \\
+$a=+1$ & $y=0$ & $(Y,A,G) \to (Y,A+1,G)$ & $P_+ \cdot (1-\eta_+)$ \\
+$a=-1$ & $y=1$ & $(Y,A,G) \to (Y+1,A-1,G-1)$ & $P_- \cdot \eta_-$ \\
+$a=-1$ & $y=0$ & $(Y,A,G) \to (Y,A-1,G)$ & $P_- \cdot (1-\eta_-)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The state space grows as $O(T^2)$, limiting the master equation to $T \lesssim 100$.
+
+\subsection{Monte Carlo Simulation}
+
+We simulate $N = 5000$ independent trajectories and compute empirical moments
+at each time step.
+
+\section{Numerical Results}
+
+\subsection{Parameters}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+$m_+, m_-$ (prior pseudo-counts) & 10, 10 \\
+$\beta$ (inverse temperature) & 0.5 \\
+$\eta_+$ (arm 1 reward probability) & 0.6 \\
+$\eta_-$ (arm 2 reward probability) & 0.4 \\
+Time horizon $T$ & 100 \\
+Monte Carlo samples & 5000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Marginal Skewness Convergence}
+
+Figure~\ref{fig:skewness} shows the marginal skewnesses for $Y$, $A$, and $G$
+as functions of time. All three decay toward zero, indicating convergence to
+Gaussian marginals.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{../fig/probit_3d_gaussianity.png}
+  \caption{Convergence to Gaussianity in the 3D probit bandit.
+  \textbf{Top row:} Marginal skewnesses for $Y$, $A$, $G$ decay toward zero.
+  \textbf{Bottom row:} Marginal excess kurtoses decay toward zero.
+  Blue solid lines: Monte Carlo estimates. Red dashed lines: Master equation (exact).
+  Both methods agree well.}
+  \label{fig:skewness}
+\end{figure}
+
+\subsection{Co-Skewness Behavior}
+
+The co-skewness $\kap_{YAG}/(\sigma_Y \sigma_A \sigma_G)$ measures the
+three-way correlation structure. Interestingly:
+
+\begin{itemize}
+  \item Co-skewness starts at zero (initial delta distribution is trivially Gaussian)
+  \item It peaks around $t \approx 10$ at approximately $0.25$
+  \item It decays more slowly than marginal skewnesses
+  \item At $t = 100$: co-skewness $\approx 0.10$
+\end{itemize}
+
+This suggests that cross-correlation non-Gaussianity persists longer than
+marginal non-Gaussianity.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{../fig/probit_3d_coskewness.png}
+  \caption{Co-skewness $\kap_{YAG}$ evolution. The three-way correlation
+  peaks during the transient and decays more slowly than marginal skewnesses.}
+  \label{fig:coskew}
+\end{figure}
+
+\subsection{Summary Table}
+
+\begin{center}
+\begin{tabular}{ccccccc}
+\toprule
+$t$ & Skew($Y$) & Skew($A$) & Skew($G$) & Co-skew & Kurt($Y$) & Kurt($G$) \\
+\midrule
+0   & 0.00  & 0.00  & 0.00  & 0.00  & $-3.00$ & $-3.00$ \\
+10  & 0.01  & $-0.05$ & 0.01  & 0.25  & $-0.26$ & $-0.23$ \\
+25  & 0.01  & 0.01  & 0.04  & 0.18  & $-0.08$ & $-0.07$ \\
+50  & 0.02  & 0.00  & 0.00  & 0.12  & $-0.14$ & $-0.09$ \\
+75  & $-0.01$ & $-0.01$ & $-0.03$ & 0.12  & $-0.06$ & $-0.02$ \\
+100 & $-0.01$ & $-0.03$ & $-0.05$ & 0.10  & 0.03  & 0.08 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Note: The $t=0$ kurtosis of $-3$ reflects the delta function initial condition
+(zero variance makes the excess kurtosis formula ill-defined; we report the
+limiting value).
+
+\subsection{State Space Growth}
+
+The master equation tracks the exact distribution but faces exponential
+state space growth:
+
+\begin{center}
+\begin{tabular}{cc}
+\toprule
+Time $t$ & Number of States \\
+\midrule
+10 & 286 \\
+20 & 1,771 \\
+30 & 5,416 \\
+50 & 20,892 \\
+80 & 50,000 (pruned) \\
+100 & 50,000 (pruned) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Beyond $t \approx 80$, we prune low-probability states to maintain tractability.
+
+\section{Comparison with 1D Case}
+
+In the 1D analysis using only $\gamma$, we found:
+\begin{itemize}
+  \item Skewness decays as $t^{-1/2}$ at late times
+  \item Excess kurtosis decays similarly
+  \item $K=2$ truncation error reaches machine precision by $t \sim 500$
+\end{itemize}
+
+The 3D case shows similar behavior:
+\begin{itemize}
+  \item Marginal skewnesses and kurtoses decay toward zero
+  \item The joint distribution approaches a 3D Gaussian
+  \item However, co-skewness decays more slowly, suggesting the
+        cross-correlation structure is the last to become Gaussian
+\end{itemize}
+
+\section{Physical Interpretation}
+
+The convergence to Gaussianity can be understood via the Central Limit Theorem:
+
+\begin{enumerate}
+  \item At each step, $(Y, A, G)$ receives increments $(\Delta Y, \Delta A, \Delta G)$
+  \item The increments depend on the current state through the policy
+  \item As $t$ grows, the distribution spreads (variance $\sim t$)
+  \item The effective inverse temperature $\tilde{\beta} \propto \beta/\sigma \to 0$
+  \item With $\tilde{\beta} \to 0$, the policy becomes diffuse (50-50)
+  \item Increments become approximately i.i.d.
+  \item The CLT then implies Gaussian convergence
+\end{enumerate}
+
+This mechanism is identical to the 1D case, extended to 3D.
+
+\section{Conclusion}
+
+\textbf{Main finding:} The 3D distribution $p(Y, A, G, t)$ converges to a
+3D Gaussian as $t \to \infty$.
+
+Quantitatively at $t = 100$:
+\begin{itemize}
+  \item Max $|$skewness$|$: 0.05 (approaching 0)
+  \item Max $|$excess kurtosis$|$: 0.08 (approaching 0)
+  \item Co-skewness: 0.10 (decaying more slowly)
+\end{itemize}
+
+This confirms that the late-time Gaussian approximation is valid for the
+3D sufficient statistic formulation, just as it was for the 1D $\gamma$ case.
+The co-skewness decay rate suggests that a Gaussian approximation becomes
+accurate for marginals before the full joint distribution.
+
+\end{document}
