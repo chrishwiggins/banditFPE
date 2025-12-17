@@ -118,6 +118,8 @@ class ProbitBandit3D:
         covs : array of shape (T_horizon+1, 3, 3)
         third_moments : dict of third-order cumulants
         fourth_moments : dict of fourth-order cumulants
+        third_se : dict of standard errors for third-order cumulants
+        fourth_se : dict of standard errors for fourth-order cumulants
         """
         if seed is not None:
             np.random.seed(seed)
@@ -139,9 +141,11 @@ class ProbitBandit3D:
         for t in range(T_horizon + 1):
             covs[t] = np.cov(samples[:, t, :].T)
 
-        # Compute standardized third and fourth cumulants
+        # Compute standardized third and fourth cumulants with standard errors
         third_cumulants = {}
         fourth_cumulants = {}
+        third_se = {}
+        fourth_se = {}
 
         for t in range(T_horizon + 1):
             centered = samples[:, t, :] - means[t]
@@ -155,18 +159,22 @@ class ProbitBandit3D:
                         key = (i, j, k)
                         if key not in third_cumulants:
                             third_cumulants[key] = np.zeros(T_horizon + 1)
-                        third_cumulants[key][t] = np.mean(
-                            standardized[:, i] * standardized[:, j] * standardized[:, k]
-                        )
+                            third_se[key] = np.zeros(T_horizon + 1)
+                        vals = standardized[:, i] * standardized[:, j] * standardized[:, k]
+                        third_cumulants[key][t] = np.mean(vals)
+                        third_se[key][t] = np.std(vals) / np.sqrt(n_samples)
 
             # Fourth-order (kurtosis-like) - just diagonal for now
             for i in range(3):
                 key = (i, i, i, i)
                 if key not in fourth_cumulants:
                     fourth_cumulants[key] = np.zeros(T_horizon + 1)
-                fourth_cumulants[key][t] = np.mean(standardized[:, i]**4) - 3  # Excess
+                    fourth_se[key] = np.zeros(T_horizon + 1)
+                vals = standardized[:, i]**4 - 3  # Excess
+                fourth_cumulants[key][t] = np.mean(vals)
+                fourth_se[key][t] = np.std(vals) / np.sqrt(n_samples)
 
-        return means, covs, third_cumulants, fourth_cumulants
+        return means, covs, third_cumulants, fourth_cumulants, third_se, fourth_se
 
 
 class MasterEquation3D:
@@ -309,8 +317,9 @@ class MasterEquation3D:
 
 def plot_gaussianity_convergence(means_mc, covs_mc, third_mc, fourth_mc,
                                   means_me=None, covs_me=None, third_me=None, fourth_me=None,
+                                  third_se=None, fourth_se=None,
                                   figname='../fig/probit_3d_gaussianity.png'):
-    """Plot convergence to Gaussianity."""
+    """Plot convergence to Gaussianity with uncertainty bands."""
 
     T = len(means_mc) - 1
     t_arr = np.arange(T + 1)
@@ -321,7 +330,11 @@ def plot_gaussianity_convergence(means_mc, covs_mc, third_mc, fourth_mc,
     labels_3 = ['Y', 'A', 'G']
     for i, (key, label) in enumerate(zip([(0,0,0), (1,1,1), (2,2,2)], labels_3)):
         ax = axes[0, i]
-        ax.plot(t_arr, third_mc[key], 'b-', label='MC', linewidth=1.5)
+        y = third_mc[key]
+        ax.plot(t_arr, y, 'b-', label='MC', linewidth=1.5)
+        if third_se is not None and key in third_se:
+            se = third_se[key]
+            ax.fill_between(t_arr, y - 2*se, y + 2*se, color='blue', alpha=0.2)
         if third_me is not None and key in third_me:
             ax.plot(t_arr[:len(third_me[key])], third_me[key], 'r--',
                    label='Master Eq', linewidth=1.5)
@@ -336,7 +349,11 @@ def plot_gaussianity_convergence(means_mc, covs_mc, third_mc, fourth_mc,
     for i, (idx, label) in enumerate(zip([0, 1, 2], labels_3)):
         ax = axes[1, i]
         key = (idx, idx, idx, idx)
-        ax.plot(t_arr, fourth_mc[key], 'b-', label='MC', linewidth=1.5)
+        y = fourth_mc[key]
+        ax.plot(t_arr, y, 'b-', label='MC', linewidth=1.5)
+        if fourth_se is not None and key in fourth_se:
+            se = fourth_se[key]
+            ax.fill_between(t_arr, y - 2*se, y + 2*se, color='blue', alpha=0.2)
         if fourth_me is not None and key in fourth_me:
             ax.plot(t_arr[:len(fourth_me[key])], fourth_me[key], 'r--',
                    label='Master Eq', linewidth=1.5)
@@ -353,8 +370,8 @@ def plot_gaussianity_convergence(means_mc, covs_mc, third_mc, fourth_mc,
     print(f'Saved: {figname}')
 
 
-def plot_coskewness(third_mc, third_me=None, figname='../fig/probit_3d_coskewness.png'):
-    """Plot co-skewness evolution."""
+def plot_coskewness(third_mc, third_me=None, third_se=None, figname='../fig/probit_3d_coskewness.png'):
+    """Plot co-skewness evolution with uncertainty bands."""
     T = len(third_mc[(0,0,0)]) - 1
     t_arr = np.arange(T + 1)
 
@@ -362,7 +379,11 @@ def plot_coskewness(third_mc, third_me=None, figname='../fig/probit_3d_coskewnes
 
     # Left: Co-skewness kappa_YAG
     ax = axes[0]
-    ax.plot(t_arr, third_mc[(0,1,2)], 'b-', label='MC', linewidth=2)
+    y = third_mc[(0,1,2)]
+    ax.plot(t_arr, y, 'b-', label='MC', linewidth=2)
+    if third_se is not None and (0,1,2) in third_se:
+        se = third_se[(0,1,2)]
+        ax.fill_between(t_arr, y - 2*se, y + 2*se, color='blue', alpha=0.2)
     if third_me is not None and (0,1,2) in third_me:
         ax.plot(t_arr[:len(third_me[(0,1,2)])], third_me[(0,1,2)], 'r--',
                label='Master Eq', linewidth=1.5)
@@ -470,8 +491,9 @@ def plot_correlation_matrix(covs_mc, figname='../fig/probit_3d_correlations.png'
 
 def plot_summary_figure(means_mc, covs_mc, third_mc, fourth_mc,
                         means_me=None, covs_me=None, third_me=None, fourth_me=None,
+                        third_se=None, fourth_se=None,
                         figname='../fig/probit_3d_summary.png'):
-    """Generate a comprehensive summary figure."""
+    """Generate a comprehensive summary figure with uncertainty bands."""
     T = len(means_mc) - 1
     t_arr = np.arange(T + 1)
 
@@ -482,7 +504,11 @@ def plot_summary_figure(means_mc, covs_mc, third_mc, fourth_mc,
     # Row 1, Col 1-3: Marginal skewnesses
     for i, (key, label) in enumerate(zip([(0,0,0), (1,1,1), (2,2,2)], labels)):
         ax = axes[0, i]
-        ax.plot(t_arr, third_mc[key], 'b-', linewidth=2)
+        y = third_mc[key]
+        ax.plot(t_arr, y, 'b-', linewidth=2)
+        if third_se is not None and key in third_se:
+            se = third_se[key]
+            ax.fill_between(t_arr, y - 2*se, y + 2*se, color='blue', alpha=0.2)
         if third_me is not None and key in third_me:
             ax.plot(t_arr[:len(third_me[key])], third_me[key], 'r--', linewidth=1.5)
         ax.axhline(0, color='k', linestyle=':', alpha=0.5)
@@ -493,7 +519,11 @@ def plot_summary_figure(means_mc, covs_mc, third_mc, fourth_mc,
 
     # Row 1, Col 4: Co-skewness
     ax = axes[0, 3]
-    ax.plot(t_arr, third_mc[(0,1,2)], 'purple', linewidth=2, label='Co-skewness')
+    y = third_mc[(0,1,2)]
+    ax.plot(t_arr, y, 'purple', linewidth=2, label='Co-skewness')
+    if third_se is not None and (0,1,2) in third_se:
+        se = third_se[(0,1,2)]
+        ax.fill_between(t_arr, y - 2*se, y + 2*se, color='purple', alpha=0.2)
     ax.axhline(0, color='k', linestyle=':', alpha=0.5)
     ax.set_xlabel('Time t')
     ax.set_ylabel(r'$\kappa_{YAG}$')
@@ -504,7 +534,11 @@ def plot_summary_figure(means_mc, covs_mc, third_mc, fourth_mc,
     for i, (idx, label) in enumerate(zip([0, 1, 2], labels)):
         ax = axes[1, i]
         key = (idx, idx, idx, idx)
-        ax.plot(t_arr, fourth_mc[key], 'b-', linewidth=2)
+        y = fourth_mc[key]
+        ax.plot(t_arr, y, 'b-', linewidth=2)
+        if fourth_se is not None and key in fourth_se:
+            se = fourth_se[key]
+            ax.fill_between(t_arr, y - 2*se, y + 2*se, color='blue', alpha=0.2)
         if fourth_me is not None and key in fourth_me:
             ax.plot(t_arr[:len(fourth_me[key])], fourth_me[key], 'r--', linewidth=1.5)
         ax.axhline(0, color='k', linestyle=':', alpha=0.5)
@@ -546,29 +580,32 @@ def main():
     beta = 0.5
     eta_plus = 0.6
     eta_minus = 0.4
-    T_horizon = 100
-    n_samples = 5000
+    T_horizon = 300  # Extended time horizon (MC only beyond ~80)
+    T_master = 80    # Master equation limit due to O(T^3) state space
+    n_samples = 20000  # More samples for smoother curves
 
     print(f'Parameters:')
     print(f'  m_plus = {m_plus}, m_minus = {m_minus}')
     print(f'  beta = {beta}')
     print(f'  eta_plus = {eta_plus}, eta_minus = {eta_minus}')
-    print(f'  T_horizon = {T_horizon}')
+    print(f'  T_horizon (MC) = {T_horizon}')
+    print(f'  T_horizon (Master Eq) = {T_master}')
+    print(f'  n_samples = {n_samples}')
     print()
 
     # Monte Carlo
     print('Running Monte Carlo simulation...')
     bandit = ProbitBandit3D(m_plus, m_minus, beta, eta_plus, eta_minus)
-    means_mc, covs_mc, third_mc, fourth_mc = bandit.monte_carlo_moments(
+    means_mc, covs_mc, third_mc, fourth_mc, third_se, fourth_se = bandit.monte_carlo_moments(
         T_horizon, n_samples=n_samples, seed=42
     )
     print(f'  Completed {n_samples} trajectories')
     print()
 
-    # Master equation
+    # Master equation (shorter time due to O(T^3) state space)
     print('Running Master Equation...')
     master = MasterEquation3D(m_plus, m_minus, beta, eta_plus, eta_minus)
-    distributions = master.evolve(T_horizon)
+    distributions = master.evolve(T_master)
     means_me, covs_me, third_me, fourth_me = master.compute_moments(distributions)
     print()
 
@@ -578,10 +615,11 @@ def main():
 
     # Figure 1: Main gaussianity convergence (2x3 grid)
     plot_gaussianity_convergence(means_mc, covs_mc, third_mc, fourth_mc,
-                                  means_me, covs_me, third_me, fourth_me)
+                                  means_me, covs_me, third_me, fourth_me,
+                                  third_se, fourth_se)
 
     # Figure 2: Co-skewness and all third-order cumulants
-    plot_coskewness(third_mc, third_me)
+    plot_coskewness(third_mc, third_me, third_se)
 
     # Figure 3: Means and variances
     plot_means_and_covariance(means_mc, covs_mc, means_me, covs_me)
@@ -591,7 +629,8 @@ def main():
 
     # Figure 5: Comprehensive summary (2x4 grid)
     plot_summary_figure(means_mc, covs_mc, third_mc, fourth_mc,
-                        means_me, covs_me, third_me, fourth_me)
+                        means_me, covs_me, third_me, fourth_me,
+                        third_se, fourth_se)
 
     # Summary table
     print()
@@ -599,7 +638,7 @@ def main():
     print()
     print('t      | skew(Y)    | skew(A)    | skew(G)    | co-skew    | kurt(Y)    | kurt(A)    | kurt(G)')
     print('-' * 105)
-    for t in [0, 10, 25, 50, 75, 100]:
+    for t in [0, 25, 50, 100, 150, 200, 300]:
         if t <= T_horizon:
             sk_Y = third_mc[(0,0,0)][t]
             sk_A = third_mc[(1,1,1)][t]
